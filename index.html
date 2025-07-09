@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bastón Inteligente App</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Fondo gris claro */
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 1rem; /* Bordes más redondeados */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Sombra más suave */
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem; /* Bordes redondeados para botones */
+            font-weight: 600;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        .btn-primary {
+            background-color: #4f46e5; /* Índigo */
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #4338ca;
+        }
+        .btn-danger {
+            background-color: #ef4444; /* Rojo */
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+        .progress-bar-container {
+            background-color: #e0e7ff; /* Azul claro para el fondo de la barra */
+            border-radius: 0.5rem;
+            height: 1.5rem;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background-color: #22c55e; /* Verde inicial */
+            border-radius: 0.5rem;
+            transition: width 0.3s ease-in-out, background-color 0.3s ease-in-out;
+        }
+        .sensor-status-indicator {
+            width: 1rem;
+            height: 1rem;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+        .status-active {
+            background-color: #22c55e; /* Verde */
+        }
+        .status-inactive {
+            background-color: #ef4444; /* Rojo */
+        }
+        .status-warning {
+            background-color: #facc15; /* Amarillo */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <div class="container flex-grow py-8">
+        <h1 class="text-4xl font-bold text-center text-gray-800 mb-8">Bastón Inteligente</h1>
+
+        <!-- Sección de Distancia y Sensores -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <div class="card p-6 flex flex-col items-center justify-center">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Distancia a Obstáculo</h2>
+                <div class="progress-bar-container w-full mb-4">
+                    <div id="distanceProgressBar" class="progress-bar-fill" style="width: 100%;"></div>
+                </div>
+                <p id="distanceValue" class="text-4xl font-bold text-gray-900">100 cm</p>
+                <p class="text-sm text-gray-500 mt-2">Menor distancia = Mayor riesgo</p>
+            </div>
+
+            <div class="card p-6 flex flex-col items-center justify-center">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Estado de Sensores</h2>
+                <div class="flex flex-col space-y-2 text-lg text-gray-800">
+                    <div>
+                        <span id="sensorUltrasonicStatus" class="sensor-status-indicator status-active"></span>
+                        Sensor Ultrasónico: <span class="font-medium">Activo</span>
+                    </div>
+                    <div>
+                        <span id="sensorInfraredStatus" class="sensor-status-indicator status-active"></span>
+                        Sensor Infrarrojo: <span class="font-medium">Activo</span>
+                    </div>
+                    <div>
+                        <span id="sensorGPSStatus" class="sensor-status-indicator status-active"></span>
+                        Sensor GPS: <span class="font-medium">Activo</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección de Mapa GPS -->
+            <div class="card p-6 col-span-1 md:col-span-2 lg:col-span-1 flex flex-col items-center justify-center">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Ubicación GPS</h2>
+                <div id="mapPlaceholder" class="w-full h-48 bg-gray-200 rounded-lg flex items-center justify-center text-gray-500 text-center">
+                    <p>Mapa GPS aquí (integración real requiere APIs de mapas)</p>
+                </div>
+                <p id="currentLocation" class="text-lg text-gray-700 mt-4">Lat: --, Lon: --</p>
+            </div>
+        </div>
+
+        <!-- Sección de Controles y Notificaciones -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="card p-6">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Controles del Bastón</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <button id="toggleLightsBtn" class="btn btn-primary">
+                        <span id="lightsStatus">Encender</span> Luces
+                    </button>
+                    <button id="toggleBuzzerBtn" class="btn btn-primary">
+                        <span id="buzzerStatus">Activar</span> Buzzer
+                    </button>
+                    <button id="toggleVibratorBtn" class="btn btn-primary">
+                        <span id="vibratorStatus">Activar</span> Vibrador
+                    </button>
+                    <button id="emergencyBtn" class="btn btn-danger col-span-2">
+                        Botón de Emergencia
+                    </button>
+                </div>
+            </div>
+
+            <div class="card p-6">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Notificaciones y Alertas</h2>
+                <div id="notificationArea" class="bg-blue-50 border-l-4 border-blue-400 text-blue-800 p-4 rounded-md" role="alert">
+                    <p class="font-bold">Información:</p>
+                    <p>Esperando datos del bastón...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección de Configuración y Simulación de Datos -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="card p-6">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Configuración</h2>
+                <div class="mb-4">
+                    <label for="sensitivitySlider" class="block text-gray-700 text-lg font-medium mb-2">Sensibilidad (cm): <span id="sensitivityValue">50</span></label>
+                    <input type="range" id="sensitivitySlider" min="10" max="200" value="50" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+                <div>
+                    <label for="operationMode" class="block text-gray-700 text-lg font-medium mb-2">Modo de Operación:</label>
+                    <select id="operationMode" class="block w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500">
+                        <option value="ciudad">Ciudad</option>
+                        <option value="campo-abierto">Campo Abierto</option>
+                        <option value="silencioso">Silencioso</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card p-6">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Simulación de Datos (ESP32)</h2>
+                <div class="mb-4">
+                    <label for="simulatedDistance" class="block text-gray-700 text-lg font-medium mb-2">Simular Distancia (cm):</label>
+                    <input type="number" id="simulatedDistance" value="100" min="0" max="200" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <button id="sendSimulatedDistance" class="mt-2 btn btn-primary w-full">Enviar Distancia Simulada</button>
+                </div>
+                <div class="mb-4">
+                    <label for="simulatedAlert" class="block text-gray-700 text-lg font-medium mb-2">Simular Alerta:</label>
+                    <select id="simulatedAlert" class="block w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Ninguna</option>
+                        <option value="obstaculo-cercano">Obstáculo Cercano</option>
+                        <option value="bateria-baja">Batería Baja</option>
+                    </select>
+                    <button id="sendSimulatedAlert" class="mt-2 btn btn-primary w-full">Enviar Alerta Simulada</button>
+                </div>
+                <div>
+                    <label for="simulatedLocation" class="block text-gray-700 text-lg font-medium mb-2">Simular Ubicación (Lat, Lon):</label>
+                    <input type="text" id="simulatedLocation" value="4.7110, -74.0721" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <button id="sendSimulatedLocation" class="mt-2 btn btn-primary w-full">Enviar Ubicación Simulada</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Obtener elementos del DOM
+        const distanceProgressBar = document.getElementById('distanceProgressBar');
+        const distanceValue = document.getElementById('distanceValue');
+        const sensorUltrasonicStatus = document.getElementById('sensorUltrasonicStatus');
+        const sensorInfraredStatus = document.getElementById('sensorInfraredStatus');
+        const sensorGPSStatus = document.getElementById('sensorGPSStatus');
+        const mapPlaceholder = document.getElementById('mapPlaceholder');
+        const currentLocation = document.getElementById('currentLocation');
+        const toggleLightsBtn = document.getElementById('toggleLightsBtn');
+        const lightsStatus = document.getElementById('lightsStatus');
+        const toggleBuzzerBtn = document.getElementById('toggleBuzzerBtn');
+        const buzzerStatus = document.getElementById('buzzerStatus');
+        const toggleVibratorBtn = document.getElementById('toggleVibratorBtn');
+        const vibratorStatus = document.getElementById('vibratorStatus');
+        const emergencyBtn = document.getElementById('emergencyBtn');
+        const notificationArea = document.getElementById('notificationArea');
+        const sensitivitySlider = document.getElementById('sensitivitySlider');
+        const sensitivityValueDisplay = document.getElementById('sensitivityValue');
+        const operationModeSelect = document.getElementById('operationMode');
+        const simulatedDistanceInput = document.getElementById('simulatedDistance');
+        const sendSimulatedDistanceBtn = document.getElementById('sendSimulatedDistance');
+        const simulatedAlertSelect = document.getElementById('simulatedAlert');
+        const sendSimulatedAlertBtn = document.getElementById('sendSimulatedAlert');
+        const simulatedLocationInput = document.getElementById('simulatedLocation');
+        const sendSimulatedLocationBtn = document.getElementById('sendSimulatedLocation');
+
+        // Estado inicial de los actuadores
+        let lightsOn = false;
+        let buzzerActive = false;
+        let vibratorActive = false;
+
+        // Función para actualizar la barra de progreso de distancia
+        function updateDistanceDisplay(distanceCm) {
+            // Asegurarse de que la distancia esté en un rango razonable para la barra
+            const maxDistance = 200; // Distancia máxima para la escala
+            const minDistance = 0;   // Distancia mínima para la escala
+
+            // Calcular el porcentaje inverso: menor distancia = mayor porcentaje de llenado (riesgo)
+            let percentage = 100 - ((distanceCm / maxDistance) * 100);
+            if (percentage < 0) percentage = 0;
+            if (percentage > 100) percentage = 100;
+
+            distanceProgressBar.style.width = `${percentage}%`;
+            distanceValue.textContent = `${distanceCm} cm`;
+
+            // Cambiar color de la barra según la distancia
+            if (distanceCm <= 30) {
+                distanceProgressBar.style.backgroundColor = '#ef4444'; // Rojo (peligro)
+                showNotification('¡ATENCIÓN! Obstáculo muy cercano.', 'danger');
+            } else if (distanceCm <= 80) {
+                distanceProgressBar.style.backgroundColor = '#facc15'; // Amarillo (advertencia)
+                showNotification('Obstáculo cercano detectado.', 'warning');
+            } else {
+                distanceProgressBar.style.backgroundColor = '#22c55e'; // Verde (seguro)
+                showNotification('Camino despejado.', 'info');
+            }
+        }
+
+        // Función para actualizar el estado de los sensores
+        function updateSensorStatus(sensorId, isActive) {
+            const sensorElement = document.getElementById(sensorId);
+            if (sensorElement) {
+                sensorElement.classList.remove('status-active', 'status-inactive', 'status-warning');
+                if (isActive) {
+                    sensorElement.classList.add('status-active');
+                    sensorElement.nextElementSibling.textContent = 'Activo';
+                } else {
+                    sensorElement.classList.add('status-inactive');
+                    sensorElement.nextElementSibling.textContent = 'Inactivo';
+                }
+            }
+        }
+
+        // Función para mostrar notificaciones
+        function showNotification(message, type = 'info') {
+            notificationArea.innerHTML = `<p class="font-bold">${type === 'danger' ? '¡ALERTA!' : type === 'warning' ? 'Advertencia:' : 'Información:'}</p><p>${message}</p>`;
+            notificationArea.className = `bg-${type === 'danger' ? 'red' : type === 'warning' ? 'yellow' : 'blue'}-50 border-l-4 border-${type === 'danger' ? 'red' : type === 'warning' ? 'yellow' : 'blue'}-400 text-${type === 'danger' ? 'red' : type === 'warning' ? 'yellow' : 'blue'}-800 p-4 rounded-md`;
+        }
+
+        // --- Simulación de Comunicación con ESP32 ---
+
+        // Función para simular el envío de comandos al ESP32
+        function sendCommandToESP32(command, value = '') {
+            console.log(`Simulando envío a ESP32: Comando "${command}" con valor "${value}"`);
+            showNotification(`Comando enviado: ${command} ${value}`, 'info');
+            // En una aplicación real, aquí iría la lógica para enviar datos vía BLE o WiFi.
+            // Por ejemplo, usando la API Web Bluetooth o Web Sockets.
+        }
+
+        // Función para simular la recepción de datos del ESP32
+        function receiveDataFromESP32(dataType, data) {
+            console.log(`Simulando recepción de ESP32: Tipo "${dataType}", Datos:`, data);
+            switch (dataType) {
+                case 'distance':
+                    updateDistanceDisplay(data);
+                    break;
+                case 'location':
+                    currentLocation.textContent = `Lat: ${data.lat}, Lon: ${data.lon}`;
+                    // En una app real, actualizar el mapa aquí
+                    break;
+                case 'alert':
+                    handleAlert(data);
+                    break;
+                case 'sensorStatus':
+                    // Ejemplo: data = { ultrasonic: true, infrared: true, gps: false }
+                    updateSensorStatus('sensorUltrasonicStatus', data.ultrasonic);
+                    updateSensorStatus('sensorInfraredStatus', data.infrared);
+                    updateSensorStatus('sensorGPSStatus', data.gps);
+                    break;
+                default:
+                    console.warn('Tipo de dato simulado desconocido:', dataType);
+            }
+        }
+
+        // Manejar alertas recibidas
+        function handleAlert(alertType) {
+            switch (alertType) {
+                case 'obstaculo-cercano':
+                    showNotification('¡ALERTA! Obstáculo muy cerca. ¡Cuidado!', 'danger');
+                    // Simular vibración del móvil (no posible en todos los navegadores)
+                    if (navigator.vibrate) navigator.vibrate(200);
+                    break;
+                case 'bateria-baja':
+                    showNotification('Advertencia: Batería del bastón baja.', 'warning');
+                    break;
+                default:
+                    showNotification(`Alerta recibida: ${alertType}`, 'info');
+            }
+        }
+
+
+        // --- Event Listeners para Controles ---
+
+        toggleLightsBtn.addEventListener('click', () => {
+            lightsOn = !lightsOn;
+            lightsStatus.textContent = lightsOn ? 'Apagar' : 'Encender';
+            sendCommandToESP32('luces', lightsOn ? 'on' : 'off');
+        });
+
+        toggleBuzzerBtn.addEventListener('click', () => {
+            buzzerActive = !buzzerActive;
+            buzzerStatus.textContent = buzzerActive ? 'Desactivar' : 'Activar';
+            sendCommandToESP32('buzzer', buzzerActive ? 'on' : 'off');
+        });
+
+        toggleVibratorBtn.addEventListener('click', () => {
+            vibratorActive = !vibratorActive;
+            vibratorStatus.textContent = vibratorActive ? 'Desactivar' : 'Activar';
+            sendCommandToESP32('vibrador', vibratorActive ? 'on' : 'off');
+        });
+
+        emergencyBtn.addEventListener('click', () => {
+            showNotification('¡Botón de emergencia activado! Enviando alerta...', 'danger');
+            sendCommandToESP32('emergencia', 'activar');
+            // En una app real, aquí se podría integrar el envío de SMS o llamadas a contactos de emergencia.
+        });
+
+        // --- Event Listeners para Configuración ---
+
+        sensitivitySlider.addEventListener('input', (event) => {
+            const sensitivity = event.target.value;
+            sensitivityValueDisplay.textContent = sensitivity;
+            sendCommandToESP32('sensibilidad', sensitivity);
+        });
+
+        operationModeSelect.addEventListener('change', (event) => {
+            const mode = event.target.value;
+            sendCommandToESP32('modo-operacion', mode);
+        });
+
+        // --- Event Listeners para Simulación de Datos ---
+
+        sendSimulatedDistanceBtn.addEventListener('click', () => {
+            const distance = parseInt(simulatedDistanceInput.value);
+            if (!isNaN(distance)) {
+                receiveDataFromESP32('distance', distance);
+            } else {
+                showNotification('Por favor, ingrese un número válido para la distancia.', 'warning');
+            }
+        });
+
+        sendSimulatedAlertBtn.addEventListener('click', () => {
+            const alertType = simulatedAlertSelect.value;
+            if (alertType) {
+                receiveDataFromESP32('alert', alertType);
+            } else {
+                showNotification('Seleccione un tipo de alerta para simular.', 'warning');
+            }
+        });
+
+        sendSimulatedLocationBtn.addEventListener('click', () => {
+            const locationStr = simulatedLocationInput.value;
+            const parts = locationStr.split(',').map(s => parseFloat(s.trim()));
+            if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                receiveDataFromESP32('location', { lat: parts[0], lon: parts[1] });
+            } else {
+                showNotification('Formato de ubicación inválido. Use "Lat, Lon".', 'warning');
+            }
+        });
+
+        // Inicializar la pantalla con un valor de distancia
+        updateDistanceDisplay(100); // Distancia inicial
+        updateSensorStatus('sensorUltrasonicStatus', true);
+        updateSensorStatus('sensorInfraredStatus', true);
+        updateSensorStatus('sensorGPSStatus', true);
+        currentLocation.textContent = 'Lat: 4.7110, Lon: -74.0721'; // Ubicación inicial simulada
+    </script>
+</body>
+</html>
